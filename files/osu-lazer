@@ -1,0 +1,7 @@
+#!/bin/sh
+export OSU_EXTERNAL_UPDATE_PROVIDER=1
+if [ -z "${ALSA_CONFIG_PATH+x}" ] && [ -n "${XDG_RUNTIME_DIR:-}" ] && \
+    [ -S "${XDG_RUNTIME_DIR}/pipewire-0" ]; then
+    export ALSA_CONFIG_PATH=/usr/lib/osu-lazer/alsa-pipewire.conf
+fi
+exec /usr/lib/osu-lazer/AppRun "$@"

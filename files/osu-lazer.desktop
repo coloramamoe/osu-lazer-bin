@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=osu!lazer
+Comment=Rhythm is just a click away
+Exec=osu-lazer %U
+TryExec=osu-lazer
+Icon=osu-lazer
+Terminal=false
+Categories=Game;
+MimeType=application/x-osu-beatmap-archive;application/x-osu-skin-archive;application/x-osu-beatmap;application/x-osu-replay;x-scheme-handler/osu;
+StartupWMClass=osu!

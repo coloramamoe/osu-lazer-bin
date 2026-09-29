@@ -1,0 +1,70 @@
+name: Update package
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "*/9 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: update-osu-lazer-bin
+  cancel-in-progress: true
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check upstream release
+        id: upstream
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./update.sh
+      - name: Install build tools
+        if: github.event_name != 'schedule' || steps.upstream.outputs.changed == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y bubblewrap libarchive-tools
+      - name: Install static XBPS
+        if: github.event_name != 'schedule' || steps.upstream.outputs.changed == 'true'
+        run: |
+          archive="$RUNNER_TEMP/xbps-static.tar.xz"
+          directory="$RUNNER_TEMP/xbps-static"
+          mkdir -p "$directory"
+          curl -fsSL --retry 3 https://repo-default.voidlinux.org/static/xbps-static-latest.x86_64-musl.tar.xz -o "$archive"
+          tar -xJf "$archive" -C "$directory"
+          echo "$directory/usr/bin" >> "$GITHUB_PATH"
+      - name: Build XBPS package
+        if: github.event_name != 'schedule' || steps.upstream.outputs.changed == 'true'
+        run: |
+          set -eu
+          packages="$RUNNER_TEMP/void-packages"
+          git clone --depth 1 https://github.com/void-linux/void-packages.git "$packages"
+          mkdir -p "$packages/srcpkgs/osu-lazer-bin"
+          cp template "$packages/srcpkgs/osu-lazer-bin/template"
+          cp -a files "$packages/srcpkgs/osu-lazer-bin/files"
+          printf 'XBPS_ALLOW_RESTRICTED=yes\n' >> "$packages/etc/conf"
+          cd "$packages"
+          ./xbps-src pkg osu-lazer-bin
+      - name: Upload XBPS package
+        if: github.event_name != 'schedule' || steps.upstream.outputs.changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: osu-lazer-bin-${{ steps.upstream.outputs.version }}-x86_64
+          path: |
+            ${{ runner.temp }}/void-packages/hostdir/binpkgs/nonfree/osu-lazer-bin-*.xbps
+            ${{ runner.temp }}/void-packages/hostdir/binpkgs/nonfree/x86_64-repodata
+          if-no-files-found: error
+          retention-days: 90
+      - name: Commit updated package
+        run: |
+          if git diff --quiet -- template; then
+            exit 0
+          fi
+          version="$(sed -n 's/^version=//p' template)"
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add template
+          git commit -m "update"
+          git push

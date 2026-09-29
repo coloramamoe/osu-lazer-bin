@@ -1,0 +1,43 @@
+pkgname=osu-lazer-bin
+version=2026.921.0
+revision=1
+archs="x86_64"
+create_wrksrc=yes
+skip_extraction="osu.AppImage"
+depends="alsa-lib alsa-pipewire icu libglvnd zlib"
+short_desc="Rhythm game osu! (lazer), official binary release"
+maintainer="colorama <colorama@duck.com>"
+license="MIT, CC-BY-NC-4.0"
+homepage="https://osu.ppy.sh/"
+distfiles="https://github.com/ppy/osu/releases/download/${version}-lazer/osu.AppImage"
+checksum=dced9463b501009c95dbed891abd2f0acc2efb84ee4336f5b1cc3b7c04a5fc7d
+repository=nonfree
+nostrip=yes
+nopie=yes
+nodebug=yes
+noshlibprovides=yes
+nocross="Uses the upstream x86_64 AppImage runtime during extraction"
+provides="osu-lazer-${version}_${revision}"
+conflicts="osu-lazer>=0"
+skiprdeps="/usr/lib/osu-lazer/usr/bin/libcoreclrtraceptprovider.so"
+
+do_install() {
+	local size
+	vsrccopy osu.AppImage .
+	chmod +x osu.AppImage
+	./osu.AppImage --appimage-extract
+	vmkdir usr/lib/osu-lazer
+	vcopy "squashfs-root/." usr/lib/osu-lazer
+	vbin "${FILESDIR}/osu-lazer"
+	ln -s osu-lazer "${DESTDIR}/usr/bin/osu!"
+	vinstall "${FILESDIR}/osu-lazer.desktop" 644 usr/share/applications
+	vinstall "${FILESDIR}/osu-lazer.xml" 644 usr/share/mime/packages
+	vinstall "${FILESDIR}/alsa-pipewire.conf" 644 usr/lib/osu-lazer
+	vinstall squashfs-root/osu.png 644 usr/share/pixmaps osu-lazer.png
+	for size in 64 128 256 512 1024; do
+		vinstall "squashfs-root/usr/share/icons/hicolor/${size}x${size}/apps/osu.png" \
+			644 "usr/share/icons/hicolor/${size}x${size}/apps" osu-lazer.png
+	done
+	vlicense "${FILESDIR}/LICENCE.md"
+	vlicense "${FILESDIR}/LICENSE-MIT"
+}
