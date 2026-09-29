@@ -21,20 +21,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./update.sh
-      - name: Install build tools
-        if: github.event_name != 'schedule' || steps.upstream.outputs.changed == 'true'
-        run: |
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends -y bubblewrap libarchive-tools
-      - name: Install static XBPS
-        if: github.event_name != 'schedule' || steps.upstream.outputs.changed == 'true'
-        run: |
-          archive="$RUNNER_TEMP/xbps-static.tar.xz"
-          directory="$RUNNER_TEMP/xbps-static"
-          mkdir -p "$directory"
-          curl -fsSL --retry 3 https://repo-default.voidlinux.org/static/xbps-static-latest.x86_64-musl.tar.xz -o "$archive"
-          tar -xJf "$archive" -C "$directory"
-          echo "$directory/usr/bin" >> "$GITHUB_PATH"
       - name: Build XBPS package
         if: github.event_name != 'schedule' || steps.upstream.outputs.changed == 'true'
         run: |
@@ -44,10 +30,17 @@ jobs:
           mkdir -p "$packages/srcpkgs/osu-lazer-bin"
           cp template "$packages/srcpkgs/osu-lazer-bin/template"
           cp -a files "$packages/srcpkgs/osu-lazer-bin/files"
-          printf 'XBPS_ALLOW_RESTRICTED=yes\nXBPS_CHROOT_CMD=bwrap\n' >> "$packages/etc/conf"
-          bwrap --ro-bind / / --dev /dev --proc /proc --tmpfs /tmp true
-          cd "$packages"
-          ./xbps-src pkg osu-lazer-bin
+          docker run --rm --pull=always \
+            -v "$packages:/hostrepo" \
+            -w /hostrepo \
+            ghcr.io/void-linux/void-glibc-full:latest \
+            /bin/sh -ec '
+              xbps-install -Syu xbps
+              xbps-install -y base-chroot base-devel bash git
+              printf "XBPS_ALLOW_RESTRICTED=yes\\nXBPS_CHROOT_CMD=ethereal\\nXBPS_ALLOW_CHROOT_BREAKOUT=yes\\n" >> etc/conf
+              ln -s / masterdir
+              ./xbps-src pkg osu-lazer-bin
+            '
       - name: Upload XBPS package
         if: github.event_name != 'schedule' || steps.upstream.outputs.changed == 'true'
         uses: actions/upload-artifact@v4
