@@ -22,7 +22,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./update.sh
       - name: Build XBPS package
-        if: github.event_name != 'schedule' || steps.upstream.outputs.changed == 'true'
+        if: steps.upstream.outputs.changed == 'true'
         run: |
           set -eu
           packages="$RUNNER_TEMP/void-packages"
@@ -43,7 +43,7 @@ jobs:
               ./xbps-src pkg osu-lazer-bin
             '
       - name: Upload XBPS package
-        if: github.event_name != 'schedule' || steps.upstream.outputs.changed == 'true'
+        if: steps.upstream.outputs.changed == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: osu-lazer-bin-${{ steps.upstream.outputs.version }}-x86_64
