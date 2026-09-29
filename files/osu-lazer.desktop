@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=osu!lazer
+Name=osu!
 Comment=Rhythm is just a click away
 Exec=osu-lazer %U
 TryExec=osu-lazer
