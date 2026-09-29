@@ -44,7 +44,8 @@ jobs:
           mkdir -p "$packages/srcpkgs/osu-lazer-bin"
           cp template "$packages/srcpkgs/osu-lazer-bin/template"
           cp -a files "$packages/srcpkgs/osu-lazer-bin/files"
-          printf 'XBPS_ALLOW_RESTRICTED=yes\n' >> "$packages/etc/conf"
+          printf 'XBPS_ALLOW_RESTRICTED=yes\nXBPS_CHROOT_CMD=bwrap\n' >> "$packages/etc/conf"
+          bwrap --ro-bind / / --dev /dev --proc /proc --tmpfs /tmp true
           cd "$packages"
           ./xbps-src pkg osu-lazer-bin
       - name: Upload XBPS package
