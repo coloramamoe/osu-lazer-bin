@@ -10,7 +10,7 @@ permissions:
   contents: write
 concurrency:
   group: update-osu-lazer-bin
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   update:
     runs-on: ubuntu-latest
@@ -21,8 +21,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./update.sh
+      - name: Check package release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$(sed -n 's/^version=//p' template)_$(sed -n 's/^revision=//p' template)"
+          if gh release view "$tag" --json isDraft,assets --jq '.isDraft == false and (.assets | length >= 2)' | grep -qx true; then
+            echo "missing=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "missing=true" >> "$GITHUB_OUTPUT"
+          fi
       - name: Build XBPS package
-        if: steps.upstream.outputs.changed == 'true'
+        if: steps.upstream.outputs.changed == 'true' || steps.release.outputs.missing == 'true'
         run: |
           set -eu
           packages="$RUNNER_TEMP/void-packages"
@@ -42,16 +53,6 @@ jobs:
               xbps-uhelper arch > /.xbps_chroot_init
               ./xbps-src pkg osu-lazer-bin
             '
-      - name: Upload XBPS package
-        if: steps.upstream.outputs.changed == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: osu-lazer-bin-${{ steps.upstream.outputs.version }}-x86_64
-          path: |
-            ${{ runner.temp }}/void-packages/hostdir/binpkgs/nonfree/osu-lazer-bin-*.xbps
-            ${{ runner.temp }}/void-packages/hostdir/binpkgs/nonfree/x86_64-repodata
-          if-no-files-found: error
-          retention-days: 90
       - name: Commit updated package
         run: |
           if git diff --quiet -- template; then
@@ -63,3 +64,19 @@ jobs:
           git add template
           git commit -m "update"
           git push
+      - name: Publish release
+        if: steps.upstream.outputs.changed == 'true' || steps.release.outputs.missing == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$(sed -n 's/^version=//p' template)_$(sed -n 's/^revision=//p' template)"
+          packages=("$RUNNER_TEMP"/void-packages/hostdir/binpkgs/nonfree/osu-lazer-bin-*.xbps)
+          repodata="$RUNNER_TEMP/void-packages/hostdir/binpkgs/nonfree/x86_64-repodata"
+          test -f "${packages[0]}"
+          test -f "$repodata"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "${packages[0]}" "$repodata" --clobber
+            gh release edit "$tag" --draft=false --latest
+          else
+            gh release create "$tag" "${packages[0]}" "$repodata" --title "$tag" --notes "" --target "$(git rev-parse HEAD)" --latest
+          fi
