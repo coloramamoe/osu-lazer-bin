@@ -36,9 +36,10 @@ jobs:
             ghcr.io/void-linux/void-glibc-full:latest \
             /bin/sh -ec '
               xbps-install -Syu xbps
-              xbps-install -y base-chroot base-devel bash git
+              xbps-install -y base-devel bsdtar bash git
               printf "XBPS_ALLOW_RESTRICTED=yes\\nXBPS_CHROOT_CMD=ethereal\\nXBPS_ALLOW_CHROOT_BREAKOUT=yes\\n" >> etc/conf
               ln -s / masterdir
+              xbps-uhelper arch > /.xbps_chroot_init
               ./xbps-src pkg osu-lazer-bin
             '
       - name: Upload XBPS package
