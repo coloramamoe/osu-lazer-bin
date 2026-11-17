@@ -1,5 +1,5 @@
 pkgname=osu-lazer-bin
-version=2026.1115.0
+version=2026.1117.0
 revision=1
 archs="x86_64"
 create_wrksrc=yes
@@ -10,7 +10,7 @@ maintainer="colorama <colorama@duck.com>"
 license="MIT, CC-BY-NC-4.0"
 homepage="https://osu.ppy.sh/"
 distfiles="https://github.com/ppy/osu/releases/download/${version}-lazer/osu.AppImage"
-checksum=44ea8777b823007aa0edb89b74e17f57b0698a89ac017747f72b0113531eef9e
+checksum=4ebbcb5b581c036f16785500af5c8d13ad1e6d93196fd36be8f245c2a0ea1d2d
 repository=nonfree
 nostrip=yes
 nopie=yes
